@@ -15,14 +15,10 @@ import org.typemeta.funcj.parser.Text.intr
 import org.typemeta.funcj.parser.Text.ws
 import org.typemeta.funcj.parser.Text.chr
 import org.typemeta.funcj.parser.Input
+import org.example.Expression.*
 
-import org.example.inner.Foo
-
-val foo1 = Foo.Foo2()
-val foo2 = Foo.Foo2()
-val foo3 = Foo.Foo2()
-val foo4 = Foo.Foo2()
-val foo5 = Foo.Foo2()
+import org.typemeta.funcj.parser.Combinators.choice
+import org.typemeta.funcj.parser.Ref
 
 class App : Application() {
     val greeting: String
@@ -33,13 +29,13 @@ class App : Application() {
     override fun start(stage: Stage) {
         val javaVersion = System.getProperty("java.version")
         val javafxVersion = System.getProperty("javafx.version")
-        val l = Label("Hello, JavaFX " + javafxVersion + ", running on Java " + javaVersion + ".")
+        val l = Label("Hello, JavaFX $javafxVersion, running on Java $javaVersion.")
         val scene = Scene(StackPane(l), 640.0, 480.0)
-        stage.setScene(scene)
+        stage.scene = scene
         stage.show()
     }
 
-    fun pub_launch() {
+    fun pubLaunch() {
         launch()
     }
 }
@@ -48,41 +44,8 @@ fun main() {
     test()
     println("hiya")
     val app = App()
-    app.pub_launch()
+    app.pubLaunch()
 }
-
-sealed class Unit(name: String, base:Int) {
-    val name = name
-    class Length(name: String, base:Int): Unit(name, base) 
-    class Time
-
-    class Multiplied(a: Unit, b: Unit): 
-    class Divided(a: Unit, b: Unit):
-    class Exponent(a: Unit, exponent: Int)
-
-
-    
-
-}
-
-
-
-val meters = Unit.Length("meter", 1) 
-
-class Length(inMeters: Double) {
-    val inMeters = inMeters
-    
-}
-
-sealed class UnitOrSum(s: String) {
-    val s = s
-    class Unit(unit: IntWithUnit): UnitOrSum(unit.toString()) 
-    class Sum(i: Int): UnitOrSum(i.toString())
-    
-    override fun toString(): String {
-        return s
-    }
-} 
 
 class IntWithUnit(num: Int, unit: String) {
     val num = num
@@ -93,7 +56,7 @@ class IntWithUnit(num: Int, unit: String) {
             val wsParser = ws.many()
             val unitParser = alpha.many1().map(Chr::listToString)
 
-            return intr.andL(wsParser).and(unitParser).map({ i,u -> IntWithUnit(i,u)})
+            return intr.andL(wsParser).and(unitParser).map({ i, u -> IntWithUnit(i, u) })
         }
     }
 
@@ -103,19 +66,36 @@ class IntWithUnit(num: Int, unit: String) {
 }
 
 fun test() {
-    val sum: Parser<Chr, Int> = intr.andL(chr('+')).and(intr).map(Integer::sum);
-    val diff: Parser<Chr, Int> = intr.andL(chr('-')).and(intr).map({a,b -> a-b});
-    val neg: Parser<Chr, Int> = chr('-').andR(intr);
-    val addOrSub = neg.or(sum)
-    //val i = sum.parse(Input.of("1 +2")).getOrThrow();
-    val unit = IntWithUnit.parser();
-    //val i = unit.parse(Input.of("234  meters")).getOrThrow();
+    chr('+')
+    chr('*')
 
-    val unitOrSum: Parser<Chr, UnitOrSum> = sum.map({i -> UnitOrSum.Sum(i)}).cast<UnitOrSum>().or(unit.map({u -> UnitOrSum.Unit(u)}).cast())
+    val level1Ops = choice(Operator.Add().parse, Operator.Sub().parse)
+    val level1: Ref<Chr, Expression> = Parser.ref()
 
-    val i1 = addOrSub.parse(Input.of("1+2")).getOrThrow()
-    val i2 = addOrSub.parse(Input.of("-2")).getOrThrow()
+    val level2Ops = choice(Operator.Mul().parse, Operator.Div().parse)
+    val level2: Ref<Chr, Expression> = Parser.ref()
 
-    println(i1)
-    println(i2)
+    var temp = level2.and(
+        level1Ops.and(level1)
+            .map{ a, b -> Pair(a, b)}.optional())
+        .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second,) }
+    level1.set(temp)
+
+
+    temp = Expression.dbleExpr.and(
+        level2Ops.and(level2)
+            .map{a, b -> Pair(a, b)}.optional())
+        .map {a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second,) }
+    level2.set(temp)
+
+    val v1 = "-1/2/3/4"
+    val v2 = "1-2-3-4-6"
+    println("hello world")
+    val temp1 = level1.parse(Input.of(v1)).getOrThrow()
+    val temp2 = level1.parse(Input.of(v2)).getOrThrow()
+    println(temp1.evaluate())
+    println(temp1)
+    println(temp2.evaluate())
+    println(temp2)
+
 }
