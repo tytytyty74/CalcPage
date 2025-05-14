@@ -9,7 +9,7 @@ sealed class Expression {
     class Calculation(val op: Operator, vararg val operands : Expression) : Expression()
     {
         override fun evaluate(): Double {
-            return op.evaluate(*operands);
+            return op.evaluate(*operands)
         }
 
         override fun toString():String {
@@ -41,7 +41,7 @@ sealed class Expression {
 
 
     companion object {
-        val dbleExpr : Parser<Chr, Expression> = ws.many().andR(dble).andL(ws.many()).map { a -> Expression.N(a) }
+        val dbleExpr : Parser<Chr, Expression> = ws.many().andR(dble).andL(ws.many()).map { a -> N(a) }
     }
 
 
@@ -53,7 +53,7 @@ sealed class Operator {
             return "+"
         }
         override fun evaluate(vararg operands: Expression): Double {
-            var sum = 0.0;
+            var sum = 0.0
             for (t in operands) {
                 sum+= t.evaluate()
             }

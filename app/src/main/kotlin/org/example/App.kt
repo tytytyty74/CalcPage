@@ -47,24 +47,6 @@ fun main() {
     app.pubLaunch()
 }
 
-class IntWithUnit(num: Int, unit: String) {
-    val num = num
-    val unit = unit
-
-    companion object {
-        fun parser(): Parser<Chr, IntWithUnit> {
-            val wsParser = ws.many()
-            val unitParser = alpha.many1().map(Chr::listToString)
-
-            return intr.andL(wsParser).and(unitParser).map({ i, u -> IntWithUnit(i, u) })
-        }
-    }
-
-    override fun toString(): String {
-        return num.toString() + unit
-    }
-}
-
 fun test() {
     chr('+')
     chr('*')
