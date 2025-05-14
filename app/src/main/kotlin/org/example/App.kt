@@ -10,9 +10,6 @@ import javafx.scene.layout.StackPane
 import javafx.stage.Stage
 import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.data.Chr
-import org.typemeta.funcj.parser.Text.alpha
-import org.typemeta.funcj.parser.Text.intr
-import org.typemeta.funcj.parser.Text.ws
 import org.typemeta.funcj.parser.Text.chr
 import org.typemeta.funcj.parser.Input
 import org.example.Expression.*
