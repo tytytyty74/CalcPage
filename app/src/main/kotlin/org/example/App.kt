@@ -49,7 +49,7 @@ class App : Application() {
     }
 
     fun initialize() {
-        mainList!!.items = listText;
+        mainList!!.items = listText
     }
 
     @FXML
