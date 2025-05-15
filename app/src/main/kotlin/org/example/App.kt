@@ -4,18 +4,24 @@
 package org.example
 
 import javafx.application.Application
+import javafx.collections.FXCollections
+import javafx.collections.ObservableList
+import javafx.fxml.FXML
+import javafx.fxml.FXMLLoader
+import javafx.scene.Parent
 import javafx.scene.Scene
-import javafx.scene.control.Label
-import javafx.scene.layout.StackPane
+import javafx.scene.control.ListView
+import javafx.scene.control.TextArea
 import javafx.stage.Stage
-import org.typemeta.funcj.parser.Parser
+import org.example.Expression.Calculation
 import org.typemeta.funcj.data.Chr
-import org.typemeta.funcj.parser.Text.chr
-import org.typemeta.funcj.parser.Input
-import org.example.Expression.*
-
 import org.typemeta.funcj.parser.Combinators.choice
+import org.typemeta.funcj.parser.Input
+import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.parser.Ref
+import org.typemeta.funcj.parser.Result
+import org.typemeta.funcj.parser.Text.chr
+
 
 class App : Application() {
     val greeting: String
@@ -23,17 +29,58 @@ class App : Application() {
             return "Hello World!"
         }
 
-    override fun start(stage: Stage) {
-        val javaVersion = System.getProperty("java.version")
-        val javafxVersion = System.getProperty("javafx.version")
-        val l = Label("Hello, JavaFX $javafxVersion, running on Java $javaVersion.")
-        val scene = Scene(StackPane(l), 640.0, 480.0)
-        stage.scene = scene
-        stage.show()
+
+    @Throws(Exception::class)
+    override fun start(primaryStage: Stage) {
+        val xml = this.javaClass.getResource("/main.fxml")
+        println(xml)
+        val root = FXMLLoader.load<Parent>(xml)
+
+        val scene = Scene(root, 800.0, 450.0)
+
+//        scene.getStylesheets().add(javaClass.getResource("demo.css").toExternalForm())
+        primaryStage.setScene(scene)
+
+        primaryStage.show()
     }
 
     fun pubLaunch() {
         launch()
+    }
+
+    fun initialize() {
+        mainList!!.items = listText;
+    }
+
+    @FXML
+    var mainText: TextArea? = null
+
+    @FXML
+    var mainList: ListView<String>? = null
+    var listText: ObservableList<String> = FXCollections.observableArrayList<String>()
+    fun onChange() {
+
+        val t = mainText!!.text.split("\n")
+        for (i in 0..t.size - 1) {
+            val result = parser().parse(t[i])
+            when (result) {
+                is Result.Success -> {
+                    if (listText.size <= i) {
+                        listText.add(result.getOrThrow().evaluate().toString())
+                    } else {
+                        listText[i] = result.getOrThrow().evaluate().toString()
+                    }
+                }
+                is Result.Failure -> {
+                    if (listText.size <= i) {
+                        listText.add(t[i])
+                    } else {
+                        listText[i] = t[i]
+                    }
+                }
+            }
+
+        }
     }
 }
 
@@ -42,6 +89,35 @@ fun main() {
     println("hiya")
     val app = App()
     app.pubLaunch()
+}
+
+class parser {
+    val level1Ops = choice(Operator.Add().parse, Operator.Sub().parse)
+    val level1: Ref<Chr, Expression> = Parser.ref()
+
+    val level2Ops = choice(Operator.Mul().parse, Operator.Div().parse)
+    val level2: Ref<Chr, Expression> = Parser.ref()
+
+    constructor() {
+        var temp = level2.and(
+            level1Ops.and(level1)
+                .map { a, b -> Pair(a, b) }.optional()
+        )
+            .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second) }
+        level1.set(temp)
+
+
+        temp = Expression.dbleExpr.and(
+            level2Ops.and(level2)
+                .map { a, b -> Pair(a, b) }.optional()
+        )
+            .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second) }
+        level2.set(temp)
+    }
+    fun parse(s:String) : Result<Chr, Expression> {
+        return level1.parse(Input.of(s))
+    }
+
 }
 
 fun test() {
@@ -56,15 +132,17 @@ fun test() {
 
     var temp = level2.and(
         level1Ops.and(level1)
-            .map{ a, b -> Pair(a, b)}.optional())
-        .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second,) }
+            .map { a, b -> Pair(a, b) }.optional()
+    )
+        .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second) }
     level1.set(temp)
 
 
     temp = Expression.dbleExpr.and(
         level2Ops.and(level2)
-            .map{a, b -> Pair(a, b)}.optional())
-        .map {a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second,) }
+            .map { a, b -> Pair(a, b) }.optional()
+    )
+        .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second) }
     level2.set(temp)
 
     val v1 = "-1/2/3/4"
