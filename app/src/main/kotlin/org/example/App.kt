@@ -21,6 +21,7 @@ import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.parser.Ref
 import org.typemeta.funcj.parser.Result
 import org.typemeta.funcj.parser.Text.chr
+import org.typemeta.funcj.parser.Text.ws
 
 
 class App : Application() {
@@ -98,6 +99,8 @@ class parser {
     val level2Ops = choice(Operator.Mul().parse, Operator.Div().parse)
     val level2: Ref<Chr, Expression> = Parser.ref()
 
+    val level3: Ref<Chr, Expression> = Parser.ref()
+
     constructor() {
         var temp = level2.and(
             level1Ops.and(level1)
@@ -107,12 +110,24 @@ class parser {
         level1.set(temp)
 
 
-        temp = Expression.dbleExpr.and(
+        temp = level3.and(
             level2Ops.and(level2)
                 .map { a, b -> Pair(a, b) }.optional()
         )
             .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second) }
         level2.set(temp)
+
+        temp =
+            ws.many().andR(level1.between(chr('('), addWs(chr(')'))).or(Expression.dbleExpr))
+        level3.set(temp)
+
+
+
+    }
+
+    fun <A> addWs(p: Parser<Chr, A>): Parser<Chr, A> {
+        return ws.many().andR(p).andL(ws.many())
+
     }
     fun parse(s:String) : Result<Chr, Expression> {
         return level1.parse(Input.of(s))
