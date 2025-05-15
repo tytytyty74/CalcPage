@@ -23,7 +23,7 @@ sealed class Expression {
 
         constructor(op: Operator, vararg operands : Expression) : this(op) {
             if (operands.size == 2 && operands[1].numOperands == 2) {
-                var newOps:Array<Expression> = Array(2) { n -> N(n) };
+                var newOps:Array<Expression> = Array(2) { n -> N(n) }
                 var a = operands[0]
                 var b = operands[1]
                 if (a is N && b is Calculation && b.op.level == this.op.level) {
