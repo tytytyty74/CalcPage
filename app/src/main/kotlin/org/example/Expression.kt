@@ -2,6 +2,7 @@ package org.example
 import org.example.Expression.N
 import org.typemeta.funcj.data.Chr
 import org.typemeta.funcj.data.IList
+import org.typemeta.funcj.parser.Combinators.fail
 import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.parser.Parser.choice
 import org.typemeta.funcj.parser.Text.chr
@@ -9,6 +10,9 @@ import org.typemeta.funcj.parser.Text.dble
 import org.typemeta.funcj.parser.Text.string
 import org.typemeta.funcj.parser.Text.ws
 import java.lang.Double.NaN
+import java.util.Dictionary
+import java.util.Hashtable
+import java.util.Optional
 
 
 sealed class Expression {
@@ -58,7 +62,19 @@ sealed class Expression {
     }
 
     open class N(var value: Double) : Expression() {
+        var name: Optional<String> = Optional.empty()
+        constructor(v:Double, name:String ) : this(v) {
+            named(name)
+        }
+        open fun named(name:String) : N {
+            this.name = Optional.of(name)
+            variables.put(name, this)
+            return this
+        }
         class NWithUnit(v:Double, var u: U): N(v) {
+            constructor(v:Double, u:U, s:String):this( v, u) {
+                this.named(s)
+            }
             override fun plus(a: N):N {
                 return when (a) {
                     is NWithUnit -> if (a.u eq u) {
@@ -73,10 +89,16 @@ sealed class Expression {
                     else -> NWithUnit(value + a.value, u)
                 }
             }
+            override fun named(name:String) : NWithUnit {
+                this.name = Optional.of(name)
+                variables.put(name, this)
+                return this
+            }
 
             override fun toString(): String {
-                return "$value $u"
+                return super.toString() + " $u"
             }
+
 
 
         }
@@ -87,9 +109,7 @@ sealed class Expression {
         override fun evaluate(): N {
             return this
         }
-        override fun toString():String {
-            return value.toString()
-        }
+        override fun toString():String = name.map{a -> "$a: "}.orElse("")+"$value"
         operator fun unaryPlus() {
             value = +value
         }
@@ -126,8 +146,6 @@ sealed class Expression {
         open operator fun rem(a:Int):N = this % N(a)
         open operator fun rem(a:Double):N = this % N(a)
 
-
-
     }
 
     abstract val numOperands: Int
@@ -135,9 +153,26 @@ sealed class Expression {
 
 
     companion object {
-        val dbleExpr : Parser<Chr, Expression> = ws.many().andR(dble).andL(ws.many())
-            .and(U.parser.andL(ws.many()).optional())
-            .map { a, b -> if (b.isEmpty) N(a) else N.NWithUnit(a, b.get()) }
+        var variables: MutableMap<String, N> = Hashtable()
+        val d = dble.andL(ws.many())!!
+        val du = d.and(U.parser.andL(ws.many()).optional())!!
+        val duExpr = du.map { a, b -> if (b.isEmpty) N(a) else N.NWithUnit(a, b.get()) }!!
+        fun lookup(name:String):Optional<N> = Optional.ofNullable(variables[name])
+        fun addVariable(name:String, value:N) {
+            variables.put(name, value)
+        }
+        fun dbleExpr() : Parser<Chr, N> {
+            return ws.many().andR(duExpr.or(vLookup()))
+        }
+        fun vLookup() : Parser<Chr, N> {
+            val v = mainParse.stringChoice(variables.keys.toList()).andL(ws.many())
+            return v.map{a -> lookup(a).get()}!!
+        }
+        fun resetVars() {
+            variables.clear()
+        }
+
+
     }
 
 

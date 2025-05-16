@@ -15,16 +15,25 @@ import javafx.scene.control.TextArea
 import javafx.stage.Stage
 import org.example.Expression.Calculation
 import org.typemeta.funcj.data.Chr
+import org.typemeta.funcj.data.IList
 import org.typemeta.funcj.parser.Combinators.choice
+import org.typemeta.funcj.parser.Combinators.fail
+import org.typemeta.funcj.parser.Combinators.product
 import org.typemeta.funcj.parser.Input
 import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.parser.Ref
 import org.typemeta.funcj.parser.Result
+import org.typemeta.funcj.parser.Text.alpha
+import org.typemeta.funcj.parser.Text.alphaNum
 import org.typemeta.funcj.parser.Text.chr
+import org.typemeta.funcj.parser.Text.string
 import org.typemeta.funcj.parser.Text.ws
+import org.typemeta.funcj.tuples.Tuple2
+import java.util.Optional
 
 
 class App : Application() {
+    val p = mainParse()
     val greeting: String
         get() {
             return "Hello World!"
@@ -60,25 +69,15 @@ class App : Application() {
     var mainList: ListView<String>? = null
     var listText: ObservableList<String> = FXCollections.observableArrayList<String>()
     fun onChange() {
-
+        Expression.resetVars()
         val t = mainText!!.text.split("\n")
         for (i in 0..t.size - 1) {
-            val result = parser().parse(t[i])
-            when (result) {
-                is Result.Success -> {
-                    if (listText.size <= i) {
-                        listText.add(result.getOrThrow().evaluate().toString())
-                    } else {
-                        listText[i] = result.getOrThrow().evaluate().toString()
-                    }
-                }
-                is Result.Failure -> {
-                    if (listText.size <= i) {
-                        listText.add(t[i])
-                    } else {
-                        listText[i] = t[i]
-                    }
-                }
+            val result = mainParse().parse(t[i])
+
+            if (listText.size <= i) {
+                listText.add(result)
+            } else {
+                listText[i] = result
             }
 
         }
@@ -92,7 +91,9 @@ fun main() {
     app.pubLaunch()
 }
 
-class parser {
+class mainParse {
+    val varname = alpha.and(alphaNum.many()).map { a, b -> b.fold(a.toString()) { i, j -> i + j.toString() } }
+
     val level1Ops = choice(Operator.Add().parse, Operator.Sub().parse)
     val level1: Ref<Chr, Expression> = Parser.ref()
 
@@ -100,28 +101,31 @@ class parser {
     val level2: Ref<Chr, Expression> = Parser.ref()
 
     val level3: Ref<Chr, Expression> = Parser.ref()
+    val varCheck = product(varname.andL(addWs(chr('='))), level1)
 
     constructor() {
         var temp = level2.and(
-            level1Ops.and(level1)
-                .map { a, b -> Pair(a, b) }.optional()
+            product(level1Ops, level1).optional()
         )
-            .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second) }
+            .map { a, b -> makeExpr(a, b) }
         level1.set(temp)
 
 
         temp = level3.and(
-            level2Ops.and(level2)
-                .map { a, b -> Pair(a, b) }.optional()
+            product(level2Ops, level2).optional()
         )
-            .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second) }
+            .map { a, b -> makeExpr(a, b) }
         level2.set(temp)
 
         temp =
-            ws.many().andR(level1.between(chr('('), addWs(chr(')'))).or(Expression.dbleExpr))
+            ws.many().andR(level1.between(chr('('), addWs(chr(')'))).or(Expression.dbleExpr()))
         level3.set(temp)
 
 
+    }
+
+    fun makeExpr(a: Expression, b: Optional<Tuple2<Operator, Expression>>): Expression {
+        return b.map { n -> Calculation(n.get1(), a, n.get2()) as Expression }.orElse(a)
 
     }
 
@@ -129,8 +133,23 @@ class parser {
         return ws.many().andR(p).andL(ws.many())
 
     }
-    fun parse(s:String) : Result<Chr, Expression> {
-        return level1.parse(Input.of(s))
+
+    fun parse(s: String): String {
+        val i = Input.of(s)
+        val test = level1.or(varCheck.map { a -> a.get2().evaluate().named(a.get1()) })
+
+        return test.parse(Input.of(s)).match({ a -> a.orThrow.evaluate().toString() }, { _ -> s })
+    }
+
+    companion object {
+        fun <I, A>choice2(opts:List<Parser<I, A>>): Parser<I, A> {
+            val temp = IList.ofIterable(opts)
+            return Parser.choice(temp.nonEmptyOpt().orElse(IList.of(fail<I, A>())))
+        }
+
+        fun stringChoice(opts:List<String>) : Parser<Chr, String> {
+            return choice2(opts.map{a -> string(a)})
+        }
     }
 
 }
@@ -153,7 +172,7 @@ fun test() {
     level1.set(temp)
 
 
-    temp = Expression.dbleExpr.and(
+    temp = Expression.dbleExpr().and(
         level2Ops.and(level2)
             .map { a, b -> Pair(a, b) }.optional()
     )
