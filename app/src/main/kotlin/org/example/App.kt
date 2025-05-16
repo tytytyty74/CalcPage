@@ -16,20 +16,13 @@ import javafx.stage.Stage
 import org.example.Expression.Calculation
 import org.typemeta.funcj.data.Chr
 import org.typemeta.funcj.data.IList
-import org.typemeta.funcj.parser.Combinators.choice
-import org.typemeta.funcj.parser.Combinators.fail
-import org.typemeta.funcj.parser.Combinators.product
+import org.typemeta.funcj.parser.Combinators.*
 import org.typemeta.funcj.parser.Input
 import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.parser.Ref
-import org.typemeta.funcj.parser.Result
-import org.typemeta.funcj.parser.Text.alpha
-import org.typemeta.funcj.parser.Text.alphaNum
-import org.typemeta.funcj.parser.Text.chr
-import org.typemeta.funcj.parser.Text.string
-import org.typemeta.funcj.parser.Text.ws
+import org.typemeta.funcj.parser.Text.*
 import org.typemeta.funcj.tuples.Tuple2
-import java.util.Optional
+import java.util.*
 
 
 class App : Application() {
@@ -72,7 +65,7 @@ class App : Application() {
         Expression.resetVars()
         val t = mainText!!.text.split("\n")
         for (i in 0..t.size - 1) {
-            val result = mainParse().parse(t[i])
+            val result = p.parse(t[i])
 
             if (listText.size <= i) {
                 listText.add(result)
@@ -138,7 +131,7 @@ class mainParse {
         val i = Input.of(s)
         val test = level1.or(varCheck.map { a -> a.get2().evaluate().named(a.get1()) })
 
-        return test.parse(Input.of(s)).match({ a -> a.orThrow.evaluate().toString() }, { _ -> s })
+        return test.parse(i).match({ a -> a.orThrow.evaluate().toString() }, { _ -> s })
     }
 
     companion object {

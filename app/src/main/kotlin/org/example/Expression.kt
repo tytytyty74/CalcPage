@@ -2,17 +2,11 @@ package org.example
 import org.example.Expression.N
 import org.typemeta.funcj.data.Chr
 import org.typemeta.funcj.data.IList
-import org.typemeta.funcj.parser.Combinators.fail
 import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.parser.Parser.choice
-import org.typemeta.funcj.parser.Text.chr
-import org.typemeta.funcj.parser.Text.dble
-import org.typemeta.funcj.parser.Text.string
-import org.typemeta.funcj.parser.Text.ws
+import org.typemeta.funcj.parser.Text.*
 import java.lang.Double.NaN
-import java.util.Dictionary
-import java.util.Hashtable
-import java.util.Optional
+import java.util.*
 
 
 sealed class Expression {
