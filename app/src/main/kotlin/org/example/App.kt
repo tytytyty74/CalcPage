@@ -13,7 +13,9 @@ import javafx.scene.Scene
 import javafx.scene.control.ListView
 import javafx.scene.control.TextArea
 import javafx.stage.Stage
-import org.example.Expression.Calculation
+import org.example.expression.Expression
+import org.example.expression.Expression.Calculation
+import org.example.expression.Operator
 import org.typemeta.funcj.data.Chr
 import org.typemeta.funcj.data.IList
 import org.typemeta.funcj.parser.Combinators.*
