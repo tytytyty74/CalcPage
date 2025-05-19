@@ -2,8 +2,10 @@ package org.example
 import org.example.Expression.N
 import org.typemeta.funcj.data.Chr
 import org.typemeta.funcj.data.IList
+import org.typemeta.funcj.parser.Combinators.fail
 import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.parser.Parser.choice
+import org.typemeta.funcj.parser.Ref
 import org.typemeta.funcj.parser.Text.*
 import java.lang.Double.NaN
 import java.util.*
@@ -62,7 +64,7 @@ sealed class Expression {
         }
         open fun named(name:String) : N {
             this.name = Optional.of(name)
-            variables.put(name, this)
+            addVariable(name, this)
             return this
         }
         class NWithUnit(v:Double, var u: U): N(v) {
@@ -85,7 +87,7 @@ sealed class Expression {
             }
             override fun named(name:String) : NWithUnit {
                 this.name = Optional.of(name)
-                variables.put(name, this)
+                addVariable(name, this)
                 return this
             }
 
@@ -151,19 +153,18 @@ sealed class Expression {
         val d = dble.andL(ws.many())!!
         val du = d.and(U.parser.andL(ws.many()).optional())!!
         val duExpr = du.map { a, b -> if (b.isEmpty) N(a) else N.NWithUnit(a, b.get()) }!!
+        val vLookup : Ref<Chr, N> = Parser.ref()
+
+        val dbleExpr: Parser<Chr, N> = ws.many().andR(duExpr.or(vLookup))
         fun lookup(name:String):Optional<N> = Optional.ofNullable(variables[name])
         fun addVariable(name:String, value:N) {
             variables.put(name, value)
         }
-        fun dbleExpr() : Parser<Chr, N> {
-            return ws.many().andR(duExpr.or(vLookup()))
-        }
-        fun vLookup() : Parser<Chr, N> {
-            val v = mainParse.stringChoice(variables.keys.toList()).andL(ws.many())
-            return v.map{a -> lookup(a).get()}!!
-        }
+
+
         fun resetVars() {
             variables.clear()
+            vLookup.set(fail())
         }
 
 
@@ -172,63 +173,69 @@ sealed class Expression {
 
 }
 
+
 abstract class Operator {
-    class Add : Operator() {
-        override fun toString():String {
-            return "+"
-        }
-        override fun evaluate(vararg operands: Expression): N {
-            var sum = if (operands.isNotEmpty()) operands[0].evaluate() else N(0.0)
-            for (t in operands.drop(1)) {
-                sum+= t.evaluate()
-            }
-            return sum
-        }
-
-        override val parse: Parser<Chr, Operator> = chr('+').map { _ -> this }
-        override val level: Int = 1
-    }
-    class Sub : Operator() {
-        override fun toString():String {
-            return "-"
-        }
-        override fun evaluate(vararg operands: Expression): N {
-            return if (operands.isEmpty()) N(0.0) else operands[0].evaluate() - Add().evaluate(*operands.drop(1).toTypedArray())
-        }
-        override val parse: Parser<Chr, Operator> = chr('-').map { _ -> this }
-
-        override val level: Int = 1
-    }
-    class Mul : Operator() {
-        override fun toString():String {
-            return "*"
-        }
-        override fun evaluate(vararg operands: Expression): N {
-            var product = if (operands.isNotEmpty()) operands[0].evaluate() else N(0.0)
-            for (t in operands.drop(1)) {
-                product *= t.evaluate()
-            }
-            return product
-        }
-        override val parse: Parser<Chr, Operator> = chr('*').map { _ -> this }
-
-        override val level: Int = 2
-    }
-    class Div : Operator() {
-        override fun toString():String {
-            return "/"
-        }
-        override fun evaluate(vararg operands: Expression): N {
-            return if (operands.isEmpty()) N(0.0) else operands[0].evaluate() / Mul().evaluate(*operands.drop(1).toTypedArray())
-        }
-
-        override val parse: Parser<Chr, Operator> = chr('/').map { _ -> this }
-        override val level: Int = 2
-    }
-
     abstract fun evaluate(vararg operands: Expression): N
     abstract val parse:Parser<Chr, Operator>
     abstract val level:Int
+    companion object {
+        val add = object : Operator() {
+            override fun toString():String {
+                return "+"
+            }
+            override fun evaluate(vararg operands: Expression): N {
+                var sum = if (operands.isNotEmpty()) operands[0].evaluate() else N(0.0)
+                for (t in operands.drop(1)) {
+                    sum+= t.evaluate()
+                }
+                return sum
+            }
+
+            override val parse: Parser<Chr, Operator> = chr('+').map { _ -> this }
+            override val level: Int = 1
+        }
+        val sub = object : Operator() {
+            override fun toString():String {
+                return "-"
+            }
+            override fun evaluate(vararg operands: Expression): N {
+                return if (operands.isEmpty()) N(0.0) else operands[0].evaluate() - add.evaluate(*operands.drop(1).toTypedArray())
+            }
+            override val parse: Parser<Chr, Operator> = chr('-').map { _ -> this }
+
+            override val level: Int = 1
+
+        }
+
+        val mul = object : Operator() {
+            override fun toString():String {
+                return "*"
+            }
+            override fun evaluate(vararg operands: Expression): N {
+                var product = if (operands.isNotEmpty()) operands[0].evaluate() else N(0.0)
+                for (t in operands.drop(1)) {
+                    product *= t.evaluate()
+                }
+                return product
+            }
+            override val parse: Parser<Chr, Operator> = chr('*').map { _ -> this }
+
+            override val level: Int = 2
+        }
+
+        val div = object : Operator() {
+            override fun toString():String {
+                return "/"
+            }
+            override fun evaluate(vararg operands: Expression): N {
+                return if (operands.isEmpty()) N(0.0) else operands[0].evaluate() / mul.evaluate(*operands.drop(1).toTypedArray())
+            }
+
+            override val parse: Parser<Chr, Operator> = chr('/').map { _ -> this }
+            override val level: Int = 2
+        }
+
+    }
 }
 
 abstract class U {

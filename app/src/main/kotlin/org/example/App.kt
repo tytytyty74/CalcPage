@@ -16,10 +16,13 @@ import javafx.stage.Stage
 import org.example.Expression.Calculation
 import org.typemeta.funcj.data.Chr
 import org.typemeta.funcj.data.IList
+import org.typemeta.funcj.data.Lazy
 import org.typemeta.funcj.parser.Combinators.*
 import org.typemeta.funcj.parser.Input
 import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.parser.Ref
+import org.typemeta.funcj.parser.Result
+import org.typemeta.funcj.parser.SymSet
 import org.typemeta.funcj.parser.Text.*
 import org.typemeta.funcj.tuples.Tuple2
 import java.util.*
@@ -78,7 +81,6 @@ class App : Application() {
 }
 
 fun main() {
-    test()
     println("hiya")
     val app = App()
     app.pubLaunch()
@@ -87,10 +89,10 @@ fun main() {
 class mainParse {
     val varname = alpha.and(alphaNum.many()).map { a, b -> b.fold(a.toString()) { i, j -> i + j.toString() } }
 
-    val level1Ops = choice(Operator.Add().parse, Operator.Sub().parse)
+    val level1Ops = choice(Operator.add.parse, Operator.sub.parse)
     val level1: Ref<Chr, Expression> = Parser.ref()
 
-    val level2Ops = choice(Operator.Mul().parse, Operator.Div().parse)
+    val level2Ops = choice(Operator.mul.parse, Operator.div.parse)
     val level2: Ref<Chr, Expression> = Parser.ref()
 
     val level3: Ref<Chr, Expression> = Parser.ref()
@@ -111,7 +113,7 @@ class mainParse {
         level2.set(temp)
 
         temp =
-            ws.many().andR(level1.between(chr('('), addWs(chr(')'))).or(Expression.dbleExpr()))
+            ws.many().andR(level1.between(chr('('), addWs(chr(')'))).or(Expression.dbleExpr))
         level3.set(temp)
 
 
@@ -147,39 +149,27 @@ class mainParse {
 
 }
 
-fun test() {
-    chr('+')
-    chr('*')
-
-    val level1Ops = choice(Operator.Add().parse, Operator.Sub().parse)
-    val level1: Ref<Chr, Expression> = Parser.ref()
-
-    val level2Ops = choice(Operator.Mul().parse, Operator.Div().parse)
-    val level2: Ref<Chr, Expression> = Parser.ref()
-
-    var temp = level2.and(
-        level1Ops.and(level1)
-            .map { a, b -> Pair(a, b) }.optional()
-    )
-        .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second) }
-    level1.set(temp)
-
-
-    temp = Expression.dbleExpr().and(
-        level2Ops.and(level2)
-            .map { a, b -> Pair(a, b) }.optional()
-    )
-        .map { a, b -> if (b.isEmpty) a else Calculation(b.get().first, a, b.get().second) }
-    level2.set(temp)
-
-    val v1 = "-1/2/3/4"
-    val v2 = "1-2-3-4-6"
-    println("hello world")
-    val temp1 = level1.parse(Input.of(v1)).getOrThrow()
-    val temp2 = level1.parse(Input.of(v2)).getOrThrow()
-    println(temp1.evaluate())
-    println(temp1)
-    println(temp2.evaluate())
-    println(temp2)
-
+/*
+class Context {
+    val variable: Map<Variable, Value>
 }
+
+class Expression {
+    fun evaluate(context: Context) -> Value
+}
+
+10 + x
+
+hello = 10
+hiya = 20
+
+10 + hiya
+
+choice("hello", "hiya")
+interperting:
+1. tokenization, turns bytes into tokens -> ["10", " ", "+", " ", "x"]
+2. parsing, turns tokens into parse-trees -> Calculation(Add, Int(10),Var("x"))
+3. evaluate, turns parse-trees into values -> Err("x hasnt been assigned to a value")
+
+10 + x
+ */
