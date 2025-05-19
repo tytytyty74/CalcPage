@@ -4,8 +4,6 @@ import org.typemeta.funcj.control.Either
 import org.typemeta.funcj.data.Chr
 import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.parser.Text.chr
-import java.util.Optional
-import javax.swing.text.html.Option
 
 abstract class Operator {
     class Add : Operator() {
