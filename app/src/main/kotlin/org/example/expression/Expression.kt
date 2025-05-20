@@ -1,13 +1,8 @@
 package org.example.expression
-import org.example.mainParse
 import org.typemeta.funcj.control.Either
 import org.typemeta.funcj.data.Chr
 import org.typemeta.funcj.parser.Parser
-import org.typemeta.funcj.parser.Text.alpha
-import org.typemeta.funcj.parser.Text.alphaNum
-import org.typemeta.funcj.parser.Text.dble
-import org.typemeta.funcj.parser.Text.ws
-import java.util.*
+import org.typemeta.funcj.parser.Text.*
 
 
 sealed class Expression {

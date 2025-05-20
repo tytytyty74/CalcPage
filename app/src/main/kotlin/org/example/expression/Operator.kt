@@ -1,11 +1,9 @@
 package org.example.expression
 
-import com.google.errorprone.annotations.Var
 import org.typemeta.funcj.control.Either
 import org.typemeta.funcj.data.Chr
 import org.typemeta.funcj.parser.Parser
 import org.typemeta.funcj.parser.Text.chr
-import kotlin.Double.Companion.NaN
 
 abstract class Operator {
     class Add : Operator() {
@@ -72,7 +70,7 @@ abstract class Operator {
                 when (v) {
                     is Either.Left -> return v
                     is Either.Right -> {
-                        context[n.name] = v.right();
+                        context[n.name] = v.right()
                         return n.evaluate(context)}
                 }
             }

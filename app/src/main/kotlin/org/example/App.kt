@@ -67,7 +67,7 @@ class App : Application() {
     var listText: ObservableList<String> = FXCollections.observableArrayList<String>()
     fun onChange() {
         val t = mainText!!.text.split("\n")
-        var c = Context()
+        val c = Context()
         for (i in 0..t.size - 1) {
             val result = p.parse(t[i], c)
 
@@ -97,7 +97,6 @@ class mainParse {
     val level2: Ref<Chr, Expression> = Parser.ref()
 
     val level3: Ref<Chr, Expression> = Parser.ref()
-    val varCheck = product(varname.andL(addWs(chr('='))), level1)
 
     constructor() {
         var temp = level2.and(

@@ -1,7 +1,6 @@
 package org.example.expression
 import org.typemeta.funcj.control.Either
 import java.lang.Double.NaN
-import java.util.*
 
 open class N(var value: Double) : Expression() {
     class NWithUnit(v:Double, var u: U): N(v) {
