@@ -3,6 +3,8 @@ import org.example.mainParse
 import org.typemeta.funcj.control.Either
 import org.typemeta.funcj.data.Chr
 import org.typemeta.funcj.parser.Parser
+import org.typemeta.funcj.parser.Text.alpha
+import org.typemeta.funcj.parser.Text.alphaNum
 import org.typemeta.funcj.parser.Text.dble
 import org.typemeta.funcj.parser.Text.ws
 import java.util.*
@@ -61,24 +63,14 @@ sealed class Expression {
 
 
     companion object {
-        var variables: MutableMap<String, N> = Hashtable()
         val d = dble.andL(ws.many())!!
         val du = d.and(U.parser.andL(ws.many()).optional())!!
-        val duExpr = du.map { a, b -> if (b.isEmpty) N(a) else N.NWithUnit(a, b.get()) }!!
-        fun lookup(name:String):Optional<N> = Optional.ofNullable(variables[name])
-        fun addVariable(name:String, value:N) {
-            variables.put(name, value)
-        }
-        fun dbleExpr() : Parser<Chr, N> {
-            return ws.many().andR(duExpr.or(vLookup()))
-        }
-        fun vLookup() : Parser<Chr, N> {
-            val v = mainParse.Companion.stringChoice(variables.keys.toList()).andL(ws.many())
-            return v.map{a -> lookup(a).get()}!!
-        }
-        fun resetVars() {
-            variables.clear()
-        }
+        val varname = alpha.and(alphaNum.many()).map { a, b -> b.fold(a.toString()) { i, j -> i + j.toString() } }.andL(ws.many())
+        val varExpr = varname.map { a -> Variable(a) }
+        val duExpr = du.map { a, b -> if (b.isEmpty) N(a) else N.NWithUnit(a, b.get()) as Expression}!!
+
+        val dbleExpr : Parser<Chr, Expression> = ws.many().andR(duExpr.or(varExpr))
+
 
 
     }

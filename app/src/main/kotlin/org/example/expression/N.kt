@@ -4,19 +4,7 @@ import java.lang.Double.NaN
 import java.util.*
 
 open class N(var value: Double) : Expression() {
-    var name: Optional<String> = Optional.empty()
-    constructor(v:Double, name:String ) : this(v) {
-        named(name)
-    }
-    open fun named(name:String) : N {
-        this.name = Optional.of(name)
-        variables.put(name, this)
-        return this
-    }
     class NWithUnit(v:Double, var u: U): N(v) {
-        constructor(v:Double, u:U, s:String):this( v, u) {
-            this.named(s)
-        }
         override fun plus(a: N):N {
             return when (a) {
                 is NWithUnit -> if (a.u eq u) {
@@ -30,11 +18,6 @@ open class N(var value: Double) : Expression() {
                 }
                 else -> NWithUnit(value + a.value, u)
             }
-        }
-        override fun named(name:String) : NWithUnit {
-            this.name = Optional.of(name)
-            variables.put(name, this)
-            return this
         }
 
         override fun toString(): String {
@@ -51,7 +34,7 @@ open class N(var value: Double) : Expression() {
     override fun evaluate(context: Context): Either<String, N> {
         return Either.right(this)
     }
-    override fun toString():String = name.map{a -> "$a: "}.orElse("")+"$value"
+    override fun toString():String = "$value"
     operator fun unaryPlus() {
         value = +value
     }
